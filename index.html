@@ -1,0 +1,1312 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-slate-50 text-slate-800">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Zenzy Collaborative White Ledger</title>
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts (Plus Jakarta Sans) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Fira+Code:wght@400;500;600&display=swap" rel="stylesheet">
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+            mono: ['"Fira Code"', 'monospace'],
+          }
+        }
+      }
+    }
+  </script>
+  
+  <style>
+    /* White theme premium cards and blurs */
+    .glass-card {
+      background: rgba(255, 255, 255, 0.85);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(226, 232, 240, 0.8);
+      box-shadow: 0 4px 20px -2px rgba(148, 163, 184, 0.12), 0 2px 8px -1px rgba(148, 163, 184, 0.08);
+    }
+    .sheet-scrollbar::-webkit-scrollbar {
+      width: 10px;
+      height: 10px;
+    }
+    .sheet-scrollbar::-webkit-scrollbar-track {
+      background: rgba(241, 245, 249, 0.8);
+    }
+    .sheet-scrollbar::-webkit-scrollbar-thumb {
+      background: rgba(148, 163, 184, 0.4);
+      border-radius: 6px;
+      border: 2px solid rgba(241, 245, 249, 0.8);
+    }
+    .sheet-scrollbar::-webkit-scrollbar-thumb:hover {
+      background: rgba(100, 116, 139, 0.6);
+    }
+    /* Grid background effect */
+    .grid-bg {
+      background-image: radial-gradient(rgba(99, 102, 241, 0.05) 1.5px, transparent 1.5px);
+      background-size: 24px 24px;
+    }
+    /* Spreadsheet cell styling */
+    .excel-cell {
+      border-right: 1px solid rgba(226, 232, 240, 0.8);
+      border-bottom: 1px solid rgba(226, 232, 240, 0.8);
+      transition: all 0.1s ease;
+    }
+    .excel-cell:hover {
+      background-color: rgba(99, 102, 241, 0.04) !important;
+    }
+    .excel-cell.selected {
+      background-color: rgba(99, 102, 241, 0.08) !important;
+      outline: 2px solid #6366f1;
+      outline-offset: -2px;
+    }
+  </style>
+</head>
+<body class="h-full font-sans antialiased grid-bg flex flex-col justify-between bg-slate-50">
+
+  <!-- ==========================================
+       MAIN VIEW CONTAINER
+       ========================================== -->
+  <div class="flex-grow pb-12">
+    
+    <!-- HEADER BAR -->
+    <header class="sticky top-0 z-40 w-full border-b border-slate-200 bg-white/80 backdrop-blur-md px-6 py-4">
+      <div class="max-w-7xl mx-auto flex flex-col lg:flex-row items-center justify-between gap-4">
+        
+        <!-- Logo and Team Status -->
+        <div class="flex items-center gap-3">
+          <div class="h-10 w-10 rounded-xl bg-gradient-to-tr from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center shadow-md shadow-indigo-500/10">
+            <i class="fa-solid fa-file-excel text-white text-lg"></i>
+          </div>
+          <div>
+            <h1 class="text-xl font-extrabold tracking-tight text-slate-900 flex items-center gap-2">
+              Zenzy <span class="text-indigo-600 text-xs px-2.5 py-0.5 rounded-full border border-indigo-200 bg-indigo-50 font-bold">Cloud Ledger Pro</span>
+            </h1>
+            <p class="text-xs text-slate-500">Automated Enterprise Attendance & Daily Deliverable Sheet</p>
+          </div>
+        </div>
+
+        <!-- Lock System Timer & Simulation controls -->
+        <div class="flex flex-wrap items-center gap-4 bg-white px-4 py-2.5 rounded-2xl border border-slate-200 shadow-sm">
+          
+          <!-- Real vs Mock Time Toggle -->
+          <div class="flex items-center gap-2 pr-3 border-r border-slate-200">
+            <span class="text-xs text-slate-500 font-medium">Clock Simulator:</span>
+            <div class="flex bg-slate-100 rounded-lg p-0.5 border border-slate-200">
+              <button id="btn-real-time" onclick="setSimulationTime(null)" class="text-[10px] px-2 py-1 rounded font-bold transition-all bg-indigo-600 text-white shadow-sm">
+                Live Time
+              </button>
+              <button id="btn-morning-mock" onclick="setSimulationTime('09:30')" class="text-[10px] px-2 py-1 rounded font-bold transition-all text-slate-600 hover:text-slate-900">
+                9:30 AM
+              </button>
+              <button id="btn-night-mock" onclick="setSimulationTime('23:45')" class="text-[10px] px-2 py-1 rounded font-bold transition-all text-slate-600 hover:text-slate-900">
+                11:45 PM
+              </button>
+              <button id="btn-lock-mock" onclick="setSimulationTime('00:05')" class="text-[10px] px-2 py-1 rounded font-bold transition-all text-slate-600 hover:text-slate-900">
+                12:05 AM (Locked)
+              </button>
+            </div>
+          </div>
+
+          <!-- Dynamic Status Pill -->
+          <div class="flex items-center gap-2">
+            <span class="text-xs text-slate-500">Lock Rule:</span>
+            <span id="lock-status-badge" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-600 border border-emerald-200">
+              <span class="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+              Open (Editable)
+            </span>
+          </div>
+
+          <!-- Dynamic Clock Display -->
+          <div class="text-right pl-2">
+            <span id="current-clock" class="font-mono text-sm font-bold text-slate-800">12:00:00 AM</span>
+            <p id="lock-countdown" class="text-[10px] text-slate-500 text-right">Lockout active at midnight</p>
+          </div>
+        </div>
+
+      </div>
+    </header>
+
+    <!-- CONTENT WRAPPER -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8 space-y-8">
+      
+      <!-- LOCK INFORMATION CARD BANNER -->
+      <div id="rule-alert" class="relative overflow-hidden rounded-2xl border border-indigo-200 bg-gradient-to-r from-indigo-50 to-purple-50/50 p-4 flex items-start gap-4 shadow-sm">
+        <div class="h-10 w-10 shrink-0 rounded-lg bg-indigo-100 flex items-center justify-center text-indigo-600">
+          <i class="fa-solid fa-circle-info text-lg"></i>
+        </div>
+        <div class="flex-grow">
+          <h4 class="text-sm font-bold text-indigo-950">Midnight Lock Policy Enabled (12:00 AM)</h4>
+          <p class="text-xs text-slate-600 mt-1 leading-relaxed">
+            Attendance submissions, updates, and deliverables are automatically recorded for today. Once the clock strikes <strong class="text-indigo-950">12:00 AM (Midnight)</strong>, editing of today's sheet is locked. All log times are automatically detected from the system clock and cannot be modified.
+          </p>
+        </div>
+        <button onclick="document.getElementById('rule-alert').classList.add('hidden')" class="text-slate-400 hover:text-slate-600 transition-colors">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <!-- DASHBOARD OVERVIEW COUNTERS (TOP) -->
+      <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <!-- Present Rate Counter -->
+        <div class="glass-card rounded-2xl p-5 flex items-center justify-between">
+          <div>
+            <span class="text-xs text-slate-500 font-semibold tracking-wider uppercase">Today's Attendance</span>
+            <h3 id="stat-attendance-rate" class="text-3xl font-extrabold text-slate-900 mt-1">0%</h3>
+            <p class="text-xs text-slate-500 mt-1"><span id="stat-attendance-fraction">0 of 5</span> members present</p>
+          </div>
+          <div class="h-12 w-12 rounded-xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-indigo-500">
+            <i class="fa-solid fa-user-check text-xl"></i>
+          </div>
+        </div>
+
+        <!-- Completed Tasks Today -->
+        <div class="glass-card rounded-2xl p-5 flex items-center justify-between">
+          <div>
+            <span class="text-xs text-slate-500 font-semibold tracking-wider uppercase">Tasks Logged Today</span>
+            <h3 id="stat-tasks-completed" class="text-3xl font-extrabold text-emerald-600 mt-1">0</h3>
+            <p class="text-xs text-slate-500 mt-1">Accomplishments finalized</p>
+          </div>
+          <div class="h-12 w-12 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-500">
+            <i class="fa-solid fa-circle-check text-xl"></i>
+          </div>
+        </div>
+
+        <!-- Active Blockers / Issues -->
+        <div class="glass-card rounded-2xl p-5 flex items-center justify-between">
+          <div>
+            <span class="text-xs text-slate-500 font-semibold tracking-wider uppercase">Active Blockers</span>
+            <h3 id="stat-active-blockers" class="text-3xl font-extrabold text-rose-600 mt-1">0</h3>
+            <p class="text-xs text-slate-500 mt-1">Sticking points highlighted</p>
+          </div>
+          <div class="h-12 w-12 rounded-xl bg-rose-50 border border-rose-100 flex items-center justify-center text-rose-500">
+            <i class="fa-solid fa-triangle-exclamation text-xl"></i>
+          </div>
+        </div>
+
+        <!-- Daily Sync Window Indicator -->
+        <div class="glass-card rounded-2xl p-5 flex items-center justify-between">
+          <div>
+            <span class="text-xs text-slate-500 font-semibold tracking-wider uppercase">Today's Gate Status</span>
+            <h3 id="stat-sync-window" class="text-xl font-bold mt-1 text-slate-800">Checking...</h3>
+            <p class="text-xs text-slate-500 mt-1" id="stat-sync-window-desc">Automatic cloud check-in active</p>
+          </div>
+          <div id="stat-sync-icon-container" class="h-12 w-12 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-600">
+            <i class="fa-solid fa-cloud text-xl"></i>
+          </div>
+        </div>
+      </section>
+
+      <!-- FIVE TEAM MEMBERS ROW/GRID -->
+      <section class="space-y-4">
+        <div class="flex items-center justify-between">
+          <div>
+            <h3 class="text-lg font-bold text-slate-900 flex items-center gap-2">
+              <i class="fa-solid fa-users text-indigo-500"></i> Active Crew Directory
+            </h3>
+            <p class="text-xs text-slate-500">Click on any team member card to instantly record dynamic progress and vibe</p>
+          </div>
+          <span class="text-xs bg-indigo-50 text-indigo-600 px-3 py-1 rounded-full border border-indigo-200 font-bold">
+            5 Active Members
+          </span>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4" id="team-members-grid">
+          <!-- Dynamically populated team cards -->
+        </div>
+      </section>
+
+      <!-- EXCEL SHEET INTERACTIVE SUITE -->
+      <section class="glass-card rounded-2xl border border-slate-200 overflow-hidden shadow-sm bg-white">
+        
+        <!-- Excel Toolbar -->
+        <div class="p-4 bg-slate-50 border-b border-slate-200 flex flex-col md:flex-row justify-between items-stretch md:items-center gap-4">
+          <div class="flex items-center gap-3">
+            <div class="bg-indigo-50 text-indigo-700 px-3 py-1.5 rounded-lg border border-indigo-100 flex items-center gap-2">
+              <i class="fa-solid fa-file-excel text-lg text-emerald-600"></i>
+              <span class="text-xs font-bold font-mono">Zenzy_Attendance_Workbook.xlsx</span>
+            </div>
+            
+            <!-- Quick Formula Indicators -->
+            <div class="hidden sm:flex items-center gap-1 bg-white border border-slate-200 px-2.5 py-1 rounded-lg">
+              <span class="text-[10px] text-slate-400 font-mono">Active Formula:</span>
+              <span class="text-[10px] text-emerald-600 font-mono font-semibold">=COUNTIF(Attendance, "Present")</span>
+            </div>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-3">
+            <!-- Search field inside excel tool -->
+            <div class="relative">
+              <i class="fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+              <input type="text" id="sheet-search" oninput="applyFilters()" placeholder="Search Cells..." 
+                     class="bg-white border border-slate-200 rounded-lg py-1.5 pl-8 pr-4 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-500">
+            </div>
+
+            <!-- Auto fill seed logs -->
+            <button onclick="seedMockData()" class="bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-2 transition-all shadow-xs">
+              <i class="fa-solid fa-wand-magic-sparkles text-amber-500"></i> Auto-Fill Logs
+            </button>
+
+            <!-- Export -->
+            <button onclick="exportToCSV()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-2 transition-all shadow-sm">
+              <i class="fa-solid fa-file-export"></i> Export Sheet
+            </button>
+          </div>
+        </div>
+
+        <!-- Excel Formula Bar -->
+        <div class="bg-white border-b border-slate-200 px-4 py-2 flex items-center gap-2">
+          <!-- Coordinates locator box -->
+          <div class="bg-slate-50 border border-slate-200 rounded px-2.5 py-1 text-xs font-mono text-indigo-600 font-semibold min-w-[50px] text-center" id="selected-cell-coordinate">
+            A1
+          </div>
+          <!-- Divider line -->
+          <div class="h-4 w-[1px] bg-slate-200 mx-1"></div>
+          <!-- fx Icon -->
+          <div class="text-xs text-slate-400 italic font-mono select-none font-bold">
+            fx
+          </div>
+          <!-- Formula bar text input -->
+          <input type="text" id="formula-bar-input" readonly placeholder="Click any cell inside the spreadsheet below to inspect formula values" 
+                 class="w-full bg-slate-50 border border-slate-200 rounded px-3 py-1 text-xs font-mono text-slate-700 placeholder-slate-400 focus:outline-none">
+        </div>
+
+        <!-- Spreadsheet Container -->
+        <div class="overflow-x-auto sheet-scrollbar">
+          <table class="w-full text-left border-collapse min-w-[1200px]" style="table-layout: fixed;">
+            <thead>
+              <!-- Excel Column Letter Headers -->
+              <tr class="bg-slate-50 text-center select-none text-[11px] font-mono text-slate-500 border-b border-slate-200">
+                <th class="w-12 py-1.5 bg-slate-100 border-r border-slate-200 font-normal">#</th>
+                <th class="w-28 py-1.5 border-r border-slate-200 font-normal">A (Date)</th>
+                <th class="w-40 py-1.5 border-r border-slate-200 font-normal">B (Team Member)</th>
+                <th class="w-44 py-1.5 border-r border-slate-200 font-normal">C (Attendance Status)</th>
+                <th class="w-96 py-1.5 border-r border-slate-200 font-normal">D (Tasks Accomplished)</th>
+                <th class="w-72 py-1.5 border-r border-slate-200 font-normal">E (Blockers Faced)</th>
+                <th class="w-36 py-1.5 border-r border-slate-200 font-normal">F (Workspace Vibe)</th>
+                <th class="w-32 py-1.5 border-r border-slate-200 font-normal">G (Submission Time)</th>
+              </tr>
+            </thead>
+            <tbody id="sheet-table-body" class="divide-y divide-slate-100 text-sm">
+              <!-- Dynamically populated database rows -->
+            </tbody>
+          </table>
+          
+          <!-- Empty State -->
+          <div id="sheet-empty-state" class="hidden p-12 text-center">
+            <div class="text-slate-400 mb-2"><i class="fa-solid fa-folder-open text-4xl"></i></div>
+            <p class="text-slate-500 text-sm">No collaborative workbook records found. Click a card to create today's first log!</p>
+          </div>
+        </div>
+
+        <!-- Excel Formula calculations summary bar (Bottom calculated row) -->
+        <div class="bg-slate-50 border-t border-slate-200 grid grid-cols-1 md:grid-cols-4 divide-y md:divide-y-0 md:divide-x divide-slate-200 text-xs font-mono py-3.5 px-4 text-slate-500">
+          <div class="flex items-center justify-between px-3 py-1.5 md:py-0">
+            <span>Total Attendance Pool:</span>
+            <span class="text-slate-900 font-bold" id="formula-sum-present">0 Present / 5</span>
+          </div>
+          <div class="flex items-center justify-between px-3 py-1.5 md:py-0">
+            <span>Overall Attendance Rate:</span>
+            <span class="text-indigo-600 font-bold" id="formula-sum-rate">0%</span>
+          </div>
+          <div class="flex items-center justify-between px-3 py-1.5 md:py-0">
+            <span>Critical Blockers Flagged:</span>
+            <span class="text-rose-600 font-bold" id="formula-sum-blockers">0 Active</span>
+          </div>
+          <div class="flex items-center justify-between px-3 py-1.5 md:py-0">
+            <span>Average Team Vibe:</span>
+            <span class="text-emerald-600 font-bold" id="formula-sum-vibe">☕ Steady</span>
+          </div>
+        </div>
+
+        <!-- Sheet Footer Stats -->
+        <div class="p-4 border-t border-slate-200 bg-white flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 gap-2">
+          <div>
+            Showing <span id="displayed-rows-count" class="font-bold text-slate-800">0</span> of <span id="total-rows-count" class="font-bold text-slate-800">0</span> database records | Double-click rows to modify
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="inline-block h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
+            <span>Connected securely to Firebase Cloud Ledger</span>
+          </div>
+        </div>
+
+      </section>
+
+    </main>
+  </div>
+
+  <!-- ==========================================
+       POPUP DIALOGS & MODALS
+       ========================================== -->
+  
+  <!-- LOG ENTRY PANEL MODAL -->
+  <div id="log-modal" class="fixed inset-0 z-50 hidden bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="glass-card w-full max-w-2xl rounded-2xl overflow-hidden shadow-2xl transition-all scale-95 duration-200 bg-white border border-slate-300" id="log-modal-content">
+      
+      <!-- Modal Header -->
+      <div class="p-6 border-b border-slate-200 flex items-center justify-between relative bg-slate-50">
+        <div class="flex items-center gap-3">
+          <div id="modal-member-avatar" class="h-12 w-12 rounded-xl text-2xl flex items-center justify-center bg-white border border-slate-200 shadow-sm">
+            👨‍💻
+          </div>
+          <div>
+            <h3 id="modal-member-name" class="text-lg font-bold text-slate-900">Select a Member</h3>
+            <p id="modal-member-role" class="text-xs text-indigo-600 font-medium">Role placeholder</p>
+          </div>
+        </div>
+        
+        <!-- Locked Mode Visual Indicator -->
+        <div id="modal-locked-indicator" class="hidden flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-rose-50 text-rose-600 border border-rose-200">
+          <i class="fa-solid fa-lock text-[10px]"></i> Locked (Past Midnight)
+        </div>
+
+        <button onclick="closeLogModal()" class="text-slate-400 hover:text-slate-600 transition-all bg-white hover:bg-slate-100 h-8 w-8 rounded-lg flex items-center justify-center border border-slate-200">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <!-- Modal Form Body -->
+      <form id="log-form" onsubmit="handleFormSubmission(event)" class="p-6 space-y-5">
+        <input type="hidden" id="form-member-id">
+        <input type="hidden" id="form-date">
+
+        <!-- Date indicator -->
+        <div class="flex justify-between items-center text-xs text-slate-500 pb-2 border-b border-slate-200/60">
+          <span>Target Logging Period:</span>
+          <div class="flex items-center gap-2">
+            <span class="text-slate-400">Captured automatically:</span>
+            <span id="form-display-date" class="font-bold text-slate-800 font-mono bg-slate-100 px-2 py-0.5 rounded border border-slate-200">2026-07-01</span>
+          </div>
+        </div>
+
+        <!-- 1. Attendance Status -->
+        <div class="space-y-2">
+          <label class="block text-xs font-bold text-slate-700 uppercase tracking-wide">
+            1. Daily Attendance Marker <span class="text-rose-500">*</span>
+          </label>
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            
+            <label class="relative flex items-center justify-between p-3 rounded-xl border border-slate-200 bg-slate-50 cursor-pointer select-none hover:border-slate-300 transition-all [&:has(input:checked)]:border-emerald-500 [&:has(input:checked)]:bg-emerald-50 [&:has(input:checked)]:text-emerald-700">
+              <span class="text-xs font-semibold">Present</span>
+              <input type="radio" name="attendanceStatus" value="Present" required class="accent-emerald-600">
+            </label>
+
+            <label class="relative flex items-center justify-between p-3 rounded-xl border border-slate-200 bg-slate-50 cursor-pointer select-none hover:border-slate-300 transition-all [&:has(input:checked)]:border-amber-500 [&:has(input:checked)]:bg-amber-50 [&:has(input:checked)]:text-amber-700">
+              <span class="text-xs font-semibold">Late Check-in</span>
+              <input type="radio" name="attendanceStatus" value="Late" class="accent-amber-600">
+            </label>
+
+            <label class="relative flex items-center justify-between p-3 rounded-xl border border-slate-200 bg-slate-50 cursor-pointer select-none hover:border-slate-300 transition-all [&:has(input:checked)]:border-rose-500 [&:has(input:checked)]:bg-rose-50 [&:has(input:checked)]:text-rose-700">
+              <span class="text-xs font-semibold">Absent</span>
+              <input type="radio" name="attendanceStatus" value="Absent" class="accent-rose-600">
+            </label>
+
+            <label class="relative flex items-center justify-between p-3 rounded-xl border border-slate-200 bg-slate-50 cursor-pointer select-none hover:border-slate-300 transition-all [&:has(input:checked)]:border-sky-500 [&:has(input:checked)]:bg-sky-50 [&:has(input:checked)]:text-sky-700">
+              <span class="text-xs font-semibold">Excused</span>
+              <input type="radio" name="attendanceStatus" value="Excused" class="accent-sky-600">
+            </label>
+
+          </div>
+        </div>
+
+        <!-- 2. Work Done -->
+        <div class="space-y-1.5">
+          <label for="form-work-done" class="block text-xs font-bold text-slate-700 uppercase tracking-wide">
+            2. What have you accomplished today? <span class="text-rose-500">*</span>
+          </label>
+          <textarea id="form-work-done" rows="3" required placeholder="Describe specifically what features, fixes, or projects you finalized today..." 
+                    class="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all"></textarea>
+        </div>
+
+        <!-- 3. Problems Faced -->
+        <div class="space-y-1.5">
+          <label for="form-problems" class="block text-xs font-bold text-slate-700 uppercase tracking-wide">
+            3. Blockers, Obstacles, or Problems faced?
+          </label>
+          <textarea id="form-problems" rows="2" placeholder="Specify any errors, lack of specifications, or blockers stalling development..." 
+                    class="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all"></textarea>
+        </div>
+
+        <!-- 4. Vibe Selection -->
+        <div class="space-y-2">
+          <label class="block text-xs font-bold text-slate-700 uppercase tracking-wide">
+            4. Current Workspace Vibe Sentiment
+          </label>
+          <div class="grid grid-cols-5 gap-2">
+            <button type="button" onclick="selectVibe('🚀 Excellent')" id="vibe-excellent" class="vibe-btn flex flex-col items-center gap-1 p-2 rounded-xl border border-slate-200 bg-slate-50 text-xs text-slate-600 hover:border-indigo-500 hover:bg-white transition-all">
+              <span class="text-xl">🚀</span>
+              <span class="scale-90 font-medium">Great</span>
+            </button>
+            <button type="button" onclick="selectVibe('😊 Productive')" id="vibe-productive" class="vibe-btn flex flex-col items-center gap-1 p-2 rounded-xl border border-slate-200 bg-slate-50 text-xs text-slate-600 hover:border-indigo-500 hover:bg-white transition-all">
+              <span class="text-xl">😊</span>
+              <span class="scale-90 font-medium">Good</span>
+            </button>
+            <button type="button" onclick="selectVibe('☕ Normal')" id="vibe-normal" class="vibe-btn flex flex-col items-center gap-1 p-2 rounded-xl border border-slate-200 bg-slate-50 text-xs text-slate-600 hover:border-indigo-500 hover:bg-white transition-all">
+              <span class="text-xl">☕</span>
+              <span class="scale-90 font-medium">Steady</span>
+            </button>
+            <button type="button" onclick="selectVibe('😴 Tired')" id="vibe-tired" class="vibe-btn flex flex-col items-center gap-1 p-2 rounded-xl border border-slate-200 bg-slate-50 text-xs text-slate-600 hover:border-indigo-500 hover:bg-white transition-all">
+              <span class="text-xl">😴</span>
+              <span class="scale-90 font-medium">Sluggish</span>
+            </button>
+            <button type="button" onclick="selectVibe('🚨 Blocked')" id="vibe-blocked" class="vibe-btn flex flex-col items-center gap-1 p-2 rounded-xl border border-slate-200 bg-slate-50 text-xs text-slate-600 hover:border-indigo-500 hover:bg-white transition-all">
+              <span class="text-xl">🚨</span>
+              <span class="scale-90 font-medium">Stuck</span>
+            </button>
+          </div>
+          <input type="hidden" id="form-vibe" value="☕ Normal">
+        </div>
+
+        <!-- Submit & Close Buttons -->
+        <div class="flex items-center justify-end gap-3 pt-4 border-t border-slate-200">
+          <button type="button" onclick="closeLogModal()" class="px-5 py-2 rounded-xl text-sm font-semibold text-slate-500 hover:text-slate-800 transition-all">
+            Cancel
+          </button>
+          <button type="submit" id="form-submit-btn" class="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold px-6 py-2 rounded-xl text-sm transition-all shadow-md flex items-center gap-2">
+            <i class="fa-solid fa-floppy-disk"></i> Save Entry
+          </button>
+        </div>
+
+      </form>
+    </div>
+  </div>
+
+  <!-- CUSTOM ALERT MODAL -->
+  <div id="custom-alert" class="fixed inset-0 z-[100] hidden bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="glass-card w-full max-w-md rounded-2xl p-6 text-center space-y-4 bg-white border border-slate-200 shadow-2xl">
+      <div id="alert-icon-container" class="h-16 w-16 mx-auto rounded-full bg-rose-50 border border-rose-200 flex items-center justify-center text-rose-500 text-3xl">
+        <i class="fa-solid fa-circle-exclamation"></i>
+      </div>
+      <div class="space-y-1">
+        <h4 id="alert-title" class="text-lg font-bold text-slate-900">System Restriction</h4>
+        <p id="alert-message" class="text-sm text-slate-500 leading-relaxed font-medium">Details of the system lockout or error sequence go here.</p>
+      </div>
+      <button onclick="closeCustomAlert()" class="w-full bg-slate-900 hover:bg-slate-800 text-white font-semibold py-2.5 rounded-xl text-sm transition-all">
+        Acknowledge
+      </button>
+    </div>
+  </div>
+
+  <!-- FOOTER STATUS STRIP -->
+  <footer class="w-full bg-white border-t border-slate-200 px-6 py-4 mt-auto">
+    <div class="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between text-xs text-slate-500 gap-4">
+      <div class="flex items-center gap-2">
+        <span class="inline-block h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
+        <span>Secure Firestore Session (Isolated Sandbox Context)</span>
+      </div>
+      <div>
+        <p>&copy; 2026 Zenzy Cloud Ledger. All modifications logged with automatic server-side timestamp hashes.</p>
+      </div>
+    </div>
+  </footer>
+
+  <!-- ==========================================
+       JAVASCRIPT MODULES & SERVICES
+       ========================================== -->
+  <script type="module">
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js';
+    import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js';
+    import { getFirestore, collection, doc, setDoc, onSnapshot } from 'https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js';
+
+    // ==========================================
+    // INITIALIZATION & STATE GLOBALS
+    // ==========================================
+    const firebaseConfig = {
+      apiKey: "AIzaSyC2366CHQdrTehbt3PfgnQJE7HEiCM5G6E",
+      authDomain: "zenzy-b1ac0.firebaseapp.com",
+      projectId: "zenzy-b1ac0",
+      storageBucket: "zenzy-b1ac0.firebasestorage.app",
+      messagingSenderId: "47905404174",
+      appId: "1:47905404174:web:2edb57fdc42213b769d35f",
+      measurementId: "G-SNLNE6VFFZ"
+    };
+
+    // Instantiate Services
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    const appId = typeof __app_id !== 'undefined' ? __app_id : 'zenzy-team-sync-light';
+
+    // User Session info
+    let currentUser = null;
+
+    // Fixed 5 Registered Team Members requested
+    const TEAM_MEMBERS = {
+      jatin: { name: "Jatin", role: "Software Architect", color: "indigo", avatar: "👨‍💻", bgClass: "from-indigo-600/5 to-indigo-500/[0.02]", borderClass: "border-indigo-100" },
+      rohit: { name: "Rohit", role: "Frontend Developer", color: "sky", avatar: "🎨", bgClass: "from-sky-600/5 to-sky-500/[0.02]", borderClass: "border-sky-100" },
+      govind: { name: "Govind", role: "Product Specialist", color: "emerald", avatar: "🧭", bgClass: "from-emerald-600/5 to-emerald-500/[0.02]", borderClass: "border-emerald-100" },
+      vikas: { name: "Vikas", role: "Backend Developer", color: "purple", avatar: "🧠", bgClass: "from-purple-600/5 to-purple-500/[0.02]", borderClass: "border-purple-100" },
+      ishant: { name: "Ishant", role: "Lead QA Engineer", color: "amber", avatar: "🕵️‍♂️", bgClass: "from-amber-600/5 to-amber-500/[0.02]", borderClass: "border-amber-100" }
+    };
+
+    // Live Database State store
+    let currentLogs = []; // Stores list of daily reports
+    let activeSimulationHour = null; // null means real user clock, overridden for clock travel
+    let activeSimulationMinute = 0;
+
+    // Date Context
+    const todayStr = '2026-07-01'; 
+
+    // Handle Clock Override (Simulation)
+    window.setSimulationTime = function(timeVal) {
+      if (timeVal === null) {
+        activeSimulationHour = null;
+        document.getElementById('btn-real-time').className = "text-[10px] px-2 py-1 rounded font-bold transition-all bg-indigo-600 text-white shadow-sm";
+        document.getElementById('btn-morning-mock').className = "text-[10px] px-2 py-1 rounded font-bold transition-all text-slate-600 hover:text-slate-900";
+        document.getElementById('btn-night-mock').className = "text-[10px] px-2 py-1 rounded font-bold transition-all text-slate-600 hover:text-slate-900";
+        document.getElementById('btn-lock-mock').className = "text-[10px] px-2 py-1 rounded font-bold transition-all text-slate-600 hover:text-slate-900";
+      } else if (timeVal === '09:30') {
+        activeSimulationHour = 9;
+        activeSimulationMinute = 30;
+        document.getElementById('btn-real-time').className = "text-[10px] px-2 py-1 rounded font-bold transition-all text-slate-600 hover:text-slate-900";
+        document.getElementById('btn-morning-mock').className = "text-[10px] px-2 py-1 rounded font-bold transition-all bg-emerald-600 text-white shadow-sm";
+        document.getElementById('btn-night-mock').className = "text-[10px] px-2 py-1 rounded font-bold transition-all text-slate-600 hover:text-slate-900";
+        document.getElementById('btn-lock-mock').className = "text-[10px] px-2 py-1 rounded font-bold transition-all text-slate-600 hover:text-slate-900";
+      } else if (timeVal === '23:45') {
+        activeSimulationHour = 23;
+        activeSimulationMinute = 45;
+        document.getElementById('btn-real-time').className = "text-[10px] px-2 py-1 rounded font-bold transition-all text-slate-600 hover:text-slate-900";
+        document.getElementById('btn-morning-mock').className = "text-[10px] px-2 py-1 rounded font-bold transition-all text-slate-600 hover:text-slate-900";
+        document.getElementById('btn-night-mock').className = "text-[10px] px-2 py-1 rounded font-bold transition-all bg-amber-600 text-white shadow-sm";
+        document.getElementById('btn-lock-mock').className = "text-[10px] px-2 py-1 rounded font-bold transition-all text-slate-600 hover:text-slate-900";
+      } else if (timeVal === '00:05') {
+        activeSimulationHour = 0;
+        activeSimulationMinute = 5; // Midnight of next calendar day / locked!
+        document.getElementById('btn-real-time').className = "text-[10px] px-2 py-1 rounded font-bold transition-all text-slate-600 hover:text-slate-900";
+        document.getElementById('btn-morning-mock').className = "text-[10px] px-2 py-1 rounded font-bold transition-all text-slate-600 hover:text-slate-900";
+        document.getElementById('btn-night-mock').className = "text-[10px] px-2 py-1 rounded font-bold transition-all text-slate-600 hover:text-slate-900";
+        document.getElementById('btn-lock-mock').className = "text-[10px] px-2 py-1 rounded font-bold transition-all bg-rose-600 text-white shadow-sm";
+      }
+      triggerTimeRefresh();
+    };
+
+    // Helper functions on global space
+    window.openLogModal = function(memberId, dateToLog = todayStr) {
+      const lockState = getCurrentLockState();
+      const member = TEAM_MEMBERS[memberId];
+      if (!member) return;
+
+      // Find if this member already logged something for the selected date
+      const selectedDateLog = currentLogs.find(log => log.memberId === memberId && log.date === dateToLog);
+
+      // Populate modal information
+      document.getElementById('modal-member-avatar').innerText = member.avatar;
+      document.getElementById('modal-member-name').innerText = member.name;
+      document.getElementById('modal-member-role').innerText = member.role;
+      document.getElementById('form-member-id').value = memberId;
+      document.getElementById('form-date').value = dateToLog;
+      document.getElementById('form-display-date').innerText = dateToLog;
+
+      // Setup Form values
+      if (selectedDateLog) {
+        // Preset values
+        const radioStatus = document.querySelector(`input[name="attendanceStatus"][value="${selectedDateLog.attendanceStatus}"]`);
+        if (radioStatus) radioStatus.checked = true;
+        document.getElementById('form-work-done').value = selectedDateLog.workDone || '';
+        document.getElementById('form-problems').value = selectedDateLog.problems || '';
+        selectVibe(selectedDateLog.vibe || '☕ Normal');
+      } else {
+        // Reset form to defaults
+        document.querySelectorAll('input[name="attendanceStatus"]').forEach(radio => radio.checked = false);
+        document.getElementById('form-work-done').value = '';
+        document.getElementById('form-problems').value = '';
+        selectVibe('☕ Normal');
+      }
+
+      // Configure visual lockout states (Editing is blocked if past 12:00 AM Midnight or past days)
+      const modal = document.getElementById('log-modal');
+      const submitBtn = document.getElementById('form-submit-btn');
+      const modalLockIndicator = document.getElementById('modal-locked-indicator');
+
+      const isPastDay = dateToLog < todayStr;
+      if (lockState.locked || isPastDay) {
+        // Read-only mode
+        modalLockIndicator.classList.remove('hidden');
+        submitBtn.disabled = true;
+        submitBtn.className = "bg-slate-200 text-slate-400 cursor-not-allowed font-semibold px-6 py-2 rounded-xl text-sm border border-slate-300 flex items-center gap-2";
+        submitBtn.innerHTML = `<i class="fa-solid fa-lock text-xs"></i> Sheet Locked`;
+        
+        // Disable editing inputs
+        document.querySelectorAll('input[name="attendanceStatus"]').forEach(el => el.disabled = true);
+        document.getElementById('form-work-done').disabled = true;
+        document.getElementById('form-problems').disabled = true;
+        document.querySelectorAll('.vibe-btn').forEach(el => el.disabled = true);
+      } else {
+        // Editable mode
+        modalLockIndicator.classList.add('hidden');
+        submitBtn.disabled = false;
+        submitBtn.className = "bg-indigo-600 hover:bg-indigo-500 text-white font-semibold px-6 py-2 rounded-xl text-sm transition-all shadow-md flex items-center gap-2 cursor-pointer";
+        submitBtn.innerHTML = `<i class="fa-solid fa-floppy-disk text-xs"></i> Save Entry`;
+        
+        // Enable editing inputs
+        document.querySelectorAll('input[name="attendanceStatus"]').forEach(el => el.disabled = false);
+        document.getElementById('form-work-done').disabled = false;
+        document.getElementById('form-problems').disabled = false;
+        document.querySelectorAll('.vibe-btn').forEach(el => el.disabled = false);
+      }
+
+      modal.classList.remove('hidden');
+      document.getElementById('log-modal-content').classList.remove('scale-95');
+      document.getElementById('log-modal-content').classList.add('scale-100');
+    };
+
+    window.closeLogModal = function() {
+      const modal = document.getElementById('log-modal');
+      document.getElementById('log-modal-content').classList.remove('scale-100');
+      document.getElementById('log-modal-content').classList.add('scale-95');
+      setTimeout(() => {
+        modal.classList.add('hidden');
+      }, 100);
+    };
+
+    // Selecting Vibe
+    window.selectVibe = function(vibeStr) {
+      document.getElementById('form-vibe').value = vibeStr;
+      
+      // Clean borders
+      document.querySelectorAll('.vibe-btn').forEach(btn => {
+        btn.classList.remove('border-indigo-500', 'bg-indigo-50', 'text-indigo-600');
+        btn.classList.add('border-slate-200', 'bg-slate-50', 'text-slate-600');
+      });
+
+      // Highlight active
+      let targetId = '';
+      if (vibeStr.includes('Excellent')) targetId = 'vibe-excellent';
+      else if (vibeStr.includes('Productive')) targetId = 'vibe-productive';
+      else if (vibeStr.includes('Normal')) targetId = 'vibe-normal';
+      else if (vibeStr.includes('Tired')) targetId = 'vibe-tired';
+      else if (vibeStr.includes('Blocked')) targetId = 'vibe-blocked';
+
+      if (targetId) {
+        const btn = document.getElementById(targetId);
+        btn.classList.remove('border-slate-200', 'bg-slate-50', 'text-slate-600');
+        btn.classList.add('border-indigo-500', 'bg-indigo-50', 'text-indigo-600');
+      }
+    };
+
+    // Custom alerts instead of browser alerts
+    window.showCustomAlert = function(title, message, isSuccess = false) {
+      document.getElementById('alert-title').innerText = title;
+      document.getElementById('alert-message').innerText = message;
+      
+      const container = document.getElementById('alert-icon-container');
+      if (isSuccess) {
+        container.className = "h-16 w-16 mx-auto rounded-full bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600 text-3xl";
+        container.innerHTML = `<i class="fa-solid fa-circle-check"></i>`;
+      } else {
+        container.className = "h-16 w-16 mx-auto rounded-full bg-rose-50 border border-rose-100 flex items-center justify-center text-rose-500 text-3xl";
+        container.innerHTML = `<i class="fa-solid fa-circle-exclamation"></i>`;
+      }
+
+      document.getElementById('custom-alert').classList.remove('hidden');
+    };
+
+    window.closeCustomAlert = function() {
+      document.getElementById('custom-alert').classList.add('hidden');
+    };
+
+    // Handle Interactive Cell Clicks
+    window.selectExcelCell = function(element, coordinateStr, fullText) {
+      // De-select all previously highlighted cells
+      document.querySelectorAll('.excel-cell').forEach(cell => {
+        cell.classList.remove('selected');
+      });
+
+      // Highlight this one
+      element.classList.add('selected');
+
+      // Update locator coordinates and formula bar values
+      document.getElementById('selected-cell-coordinate').innerText = coordinateStr;
+      document.getElementById('formula-bar-input').value = fullText || '';
+    };
+
+    // ==========================================
+    // UTILITY & DATE CALCULATION
+    // ==========================================
+    
+    // Returns active lock state according to your custom rules (No modifications after 12:00 AM Midnight)
+    function getCurrentLockState() {
+      let currentHour;
+      if (activeSimulationHour !== null) {
+        currentHour = activeSimulationHour;
+      } else {
+        currentHour = new Date().getHours();
+      }
+
+      // If simulated hour is 0 (Midnight block option) we treat it as past midnight lock-out.
+      // A day transition means we can only edit if within the day. Simulated 12:05 AM is 0 hours, 5 minutes.
+      if (activeSimulationHour === 0 && activeSimulationMinute > 0) {
+        return { locked: true, reason: "Lock Rule Applied: Past 12:00 AM Midnight Cutoff" };
+      }
+      return { locked: false, reason: "Open for editing (Before 12:00 AM Midnight)" };
+    }
+
+    // Refresh display, banners, and status messages based on active lock rules
+    function triggerTimeRefresh() {
+      const lockState = getCurrentLockState();
+      
+      // Update header indicators
+      const badge = document.getElementById('lock-status-badge');
+      const clockText = document.getElementById('current-clock');
+      const countdown = document.getElementById('lock-countdown');
+
+      // Clock formatting
+      let hrs = activeSimulationHour !== null ? activeSimulationHour : new Date().getHours();
+      let mins = activeSimulationHour !== null ? activeSimulationMinute : new Date().getMinutes();
+      let secs = activeSimulationHour !== null ? 0 : new Date().getSeconds();
+      
+      let ampm = hrs >= 12 ? 'PM' : 'AM';
+      let displayHrs = hrs % 12;
+      displayHrs = displayHrs ? displayHrs : 12; 
+      let paddedMins = mins < 10 ? '0' + mins : mins;
+      let paddedSecs = secs < 10 ? '0' + secs : secs;
+      
+      clockText.innerText = `${displayHrs}:${paddedMins}:${paddedSecs} ${ampm} ${activeSimulationHour !== null ? '(Simulated)' : ''}`;
+
+      if (lockState.locked) {
+        badge.className = "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-rose-50 text-rose-600 border border-rose-200";
+        badge.innerHTML = `<span class="h-1.5 w-1.5 rounded-full bg-rose-500"></span> Locked (Past Midnight)`;
+        countdown.innerHTML = `<span class="text-rose-600 font-semibold">Editing Lockout Active</span>`;
+        
+        // Stat block indicators
+        document.getElementById('stat-sync-window').innerText = "Locked";
+        document.getElementById('stat-sync-window').className = "text-xl font-bold mt-1 text-rose-600";
+        document.getElementById('stat-sync-window-desc').innerText = "Midnight cutoff threshold passed";
+        document.getElementById('stat-sync-icon-container').className = "h-12 w-12 rounded-xl bg-rose-50 border border-rose-100 flex items-center justify-center text-rose-600";
+        document.getElementById('stat-sync-icon-container').innerHTML = `<i class="fa-solid fa-lock"></i>`;
+      } else {
+        badge.className = "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-600 border border-emerald-200";
+        badge.innerHTML = `<span class="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse"></span> Open (Editable)`;
+        
+        // Calculate remaining time before 12:00 AM Midnight
+        let hoursRemaining = 23 - hrs;
+        let minsRemaining = 59 - mins;
+        countdown.innerHTML = `Lockout in <span class="text-emerald-600 font-bold">${hoursRemaining}h ${minsRemaining}m</span>`;
+
+        // Stat block indicators
+        document.getElementById('stat-sync-window').innerText = "Open";
+        document.getElementById('stat-sync-window').className = "text-xl font-bold mt-1 text-emerald-600";
+        document.getElementById('stat-sync-window-desc').innerText = "Submissions allowed until 12 AM";
+        document.getElementById('stat-sync-icon-container').className = "h-12 w-12 rounded-xl bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600";
+        document.getElementById('stat-sync-icon-container').innerHTML = `<i class="fa-solid fa-lock-open"></i>`;
+      }
+
+      // Re-render UI grids to reflect updated interaction constraints
+      renderTeamGrid();
+    }
+
+    // Tick current time
+    setInterval(() => {
+      if (activeSimulationHour === null) {
+        triggerTimeRefresh();
+      }
+    }, 1000);
+
+
+    // ==========================================
+    // DATA LAYER & SUBMISSIONS
+    // ==========================================
+    
+    // Save report parameters
+    window.handleFormSubmission = async function(e) {
+      e.preventDefault();
+      
+      const lockState = getCurrentLockState();
+      const date = document.getElementById('form-date').value;
+      const isPastDay = date < todayStr;
+
+      if (lockState.locked || isPastDay) {
+        showCustomAlert("Form Submission Locked", "The daily cutoff limit has passed. No modifications can occur for this period.", false);
+        closeLogModal();
+        return;
+      }
+
+      const memberId = document.getElementById('form-member-id').value;
+      const attendanceStatus = document.querySelector('input[name="attendanceStatus"]:checked')?.value;
+      const workDone = document.getElementById('form-work-done').value;
+      const problems = document.getElementById('form-problems').value;
+      const vibe = document.getElementById('form-vibe').value;
+
+      if (!attendanceStatus) {
+        showCustomAlert("Validation Error", "You must select an attendance status to proceed.", false);
+        return;
+      }
+
+      // Formulate automated captured timestamp
+      let formattedTimeStr = "";
+      let hrs = activeSimulationHour !== null ? activeSimulationHour : new Date().getHours();
+      let mins = activeSimulationHour !== null ? activeSimulationMinute : new Date().getMinutes();
+      let ampm = hrs >= 12 ? 'PM' : 'AM';
+      let displayHrs = hrs % 12;
+      displayHrs = displayHrs ? displayHrs : 12; 
+      let paddedMins = mins < 10 ? '0' + mins : mins;
+      formattedTimeStr = `${displayHrs}:${paddedMins} ${ampm}`;
+
+      const logDocId = `${memberId}_${date}`;
+      const payload = {
+        memberId,
+        memberName: TEAM_MEMBERS[memberId].name,
+        date,
+        attendanceStatus,
+        workDone,
+        problems,
+        vibe,
+        lastUpdated: Date.now(),
+        submissionTime: formattedTimeStr
+      };
+
+      try {
+        if (!currentUser) {
+          showCustomAlert("Authentication Failure", "Establishing secure context. Please check internet connection.", false);
+          return;
+        }
+
+        // Write directly to Firestore using rules structure
+        const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'daily_logs', logDocId);
+        await setDoc(docRef, payload);
+
+        closeLogModal();
+        showCustomAlert("Update Saved Automatically", `Workbook entries for ${TEAM_MEMBERS[memberId].name} recorded at ${formattedTimeStr} and synchronized to Cloud.`, true);
+
+      } catch (error) {
+        console.error("Error writing document to Firebase:", error);
+        showCustomAlert("Database Sync Error", "Writing process aborted: " + error.message, false);
+      }
+    };
+
+
+    // Autofill/Seeding function to make the workbook rich and useful immediately
+    window.seedMockData = async function() {
+      if (!currentUser) return;
+      
+      const seedDays = ['2026-06-28', '2026-06-29', '2026-06-30', '2026-07-01'];
+      const mockActivities = {
+        jatin: [
+          { work: "Designed core system schema and setup Firestore security parameters.", problems: "Tuning the security access policies." },
+          { work: "Optimized index rules and mapped spreadsheet column coordinates.", problems: "" },
+          { work: "Integrated modal structures and refined responsive layouts.", problems: "Safari backdrop blur latency issues." },
+          { work: "Prepared export procedures and added formulas calculated footer metrics.", problems: "" }
+        ],
+        rohit: [
+          { work: "Drafted grid-bg styles and designed elegant light slate shadows.", problems: "" },
+          { work: "Reconfigured premium buttons hover, shadows, and transitions.", problems: "" },
+          { work: "Created status badges and directory cards templates.", problems: "" },
+          { work: "Polished formula inspection row and clean spreadsheet gridlines.", problems: "" }
+        ],
+        govind: [
+          { work: "Completed first round of Zenzy feature mapping and requirements specs.", problems: "Priority adjustments on sprint deadline." },
+          { work: "Coordinated requirements regarding 12:00 AM locked gates testing.", problems: "" },
+          { work: "Reviewed performance logs and compiled feedback.", problems: "" },
+          { work: "Completed stakeholder validation reviews for export formatting.", problems: "" }
+        ],
+        vikas: [
+          { work: "Established Firebase configuration and connection parameters.", problems: "" },
+          { work: "Constructed secure anonymous authorization pipelines.", problems: "Custom token mismatch on isolated workspace configuration." },
+          { work: "Engineered onSnapshot updates and database write wrappers.", problems: "" },
+          { work: "Optimized ledger loads to less than 120ms.", problems: "" }
+        ],
+        ishant: [
+          { work: "Wrote unit tests for simulation clocks and locking states.", problems: "" },
+          { work: "Validated CSV structure output formats match Excel standards.", problems: "" },
+          { work: "Performed system assertion checks on anonymous sessions.", problems: "Failing query conditions on blank databases." },
+          { work: "Verified snapshot updates propagate across concurrent browsers.", problems: "" }
+        ]
+      };
+
+      const vibes = ['🚀 Excellent', '😊 Productive', '☕ Normal', '😴 Tired', '🚨 Blocked'];
+      const statuses = ['Present', 'Late', 'Present', 'Present', 'Excused'];
+      const mockTimes = ['09:42 AM', '10:15 AM', '09:05 AM', '11:20 AM', '10:02 AM'];
+
+      showCustomAlert("Seeding Cloud Sheet...", "Populating historical entries directly into Firestore...", true);
+
+      try {
+        let count = 0;
+        for (const date of seedDays) {
+          for (const memberId of Object.keys(TEAM_MEMBERS)) {
+            const index = seedDays.indexOf(date);
+            const userActivity = mockActivities[memberId][index % 4];
+            
+            const logDocId = `${memberId}_${date}`;
+            const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'daily_logs', logDocId);
+            
+            await setDoc(docRef, {
+              memberId,
+              memberName: TEAM_MEMBERS[memberId].name,
+              date,
+              attendanceStatus: statuses[(index + count) % statuses.length],
+              workDone: userActivity.work,
+              problems: userActivity.problems,
+              vibe: vibes[(index + count) % vibes.length],
+              submissionTime: mockTimes[(index + count) % mockTimes.length],
+              lastUpdated: Date.now() - (seedDays.length - index) * 86400000
+            });
+            count++;
+          }
+        }
+        showCustomAlert("Historical Seeding Finished", "Workbook populated successfully! View the interactive spreadsheet below.", true);
+      } catch (e) {
+        console.error("Seed error:", e);
+        showCustomAlert("Seeding Failed", "Could not populate cloud data: " + e.message, false);
+      }
+    };
+
+
+    // ==========================================
+    // RENDER CONTROLLERS
+    // ==========================================
+    
+    // Renders the 5 Main Team Member Cards
+    function renderTeamGrid() {
+      const container = document.getElementById('team-members-grid');
+      container.innerHTML = '';
+
+      Object.keys(TEAM_MEMBERS).forEach(memberId => {
+        const member = TEAM_MEMBERS[memberId];
+        // Fetch matching log for today
+        const log = currentLogs.find(l => l.memberId === memberId && l.date === todayStr);
+
+        let statusText = "Not Reported";
+        let statusColorClass = "bg-slate-100 text-slate-500 border-slate-200";
+        let workPreview = "No activities logged yet for today.";
+        let blockerWarning = "";
+
+        if (log) {
+          statusText = log.attendanceStatus;
+          if (log.attendanceStatus === 'Present') {
+            statusColorClass = "bg-emerald-50 text-emerald-700 border-emerald-200";
+          } else if (log.attendanceStatus === 'Late') {
+            statusColorClass = "bg-amber-50 text-amber-700 border-amber-200";
+          } else if (log.attendanceStatus === 'Absent') {
+            statusColorClass = "bg-rose-50 text-rose-700 border-rose-200";
+          } else if (log.attendanceStatus === 'Excused') {
+            statusColorClass = "bg-sky-50 text-sky-700 border-sky-200";
+          }
+
+          workPreview = log.workDone ? (log.workDone.length > 70 ? log.workDone.slice(0, 68) + '...' : log.workDone) : "No description provided.";
+          
+          if (log.problems) {
+            blockerWarning = `<div class="mt-2 text-[10px] text-rose-700 bg-rose-50 px-2 py-1 rounded border border-rose-100 flex items-center gap-1.5 font-medium">
+                               <i class="fa-solid fa-triangle-exclamation"></i>
+                               <span class="truncate">Blocker: ${log.problems}</span>
+                             </div>`;
+          }
+        }
+
+        const isLocked = getCurrentLockState().locked;
+        const cardClass = `glass-card group rounded-2xl p-5 border relative flex flex-col justify-between hover:border-indigo-300 hover:shadow-md transition-all cursor-pointer ${member.borderClass}`;
+
+        container.innerHTML += `
+          <div class="${cardClass}" onclick="openLogModal('${memberId}')">
+            
+            <!-- Top section -->
+            <div>
+              <div class="flex items-start justify-between">
+                <span class="text-3xl">${member.avatar}</span>
+                <span class="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full border ${statusColorClass}">
+                  ${statusText}
+                </span>
+              </div>
+
+              <div class="mt-4">
+                <h4 class="font-bold text-slate-900 group-hover:text-indigo-600 transition-all text-sm">${member.name}</h4>
+                <p class="text-[11px] text-slate-500">${member.role}</p>
+              </div>
+
+              <!-- Accomplishment snapshot -->
+              <p class="text-xs text-slate-600 mt-3 line-clamp-3 bg-slate-50 p-2.5 rounded-xl border border-slate-100 leading-relaxed min-h-[64px] font-medium">
+                ${workPreview}
+              </p>
+            </div>
+
+            <!-- Bottom elements -->
+            <div>
+              ${blockerWarning}
+              
+              <!-- Action Badge -->
+              <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px]">
+                <span class="text-indigo-600 font-bold group-hover:underline flex items-center gap-1">
+                  ${isLocked ? '<i class="fa-solid fa-eye"></i> View Record' : '<i class="fa-solid fa-pen-to-square"></i> Log Progress'}
+                </span>
+                <span class="text-slate-400 font-mono font-medium">${log ? log.vibe || '☕ Normal' : '☕ No Vibe'}</span>
+              </div>
+            </div>
+
+          </div>
+        `;
+      });
+    }
+
+    // Apply Real-time filters and redraw table
+    window.applyFilters = function() {
+      const searchEl = document.getElementById('sheet-search');
+      const searchVal = searchEl ? searchEl.value.toLowerCase() : '';
+
+      const filtered = currentLogs.filter(log => {
+        const matchesSearch = !searchVal || 
+          (log.memberName && log.memberName.toLowerCase().includes(searchVal)) || 
+          (log.workDone && log.workDone.toLowerCase().includes(searchVal)) || 
+          (log.problems && log.problems.toLowerCase().includes(searchVal)) || 
+          (log.date && log.date.includes(searchVal)) ||
+          (log.attendanceStatus && log.attendanceStatus.toLowerCase().includes(searchVal)) ||
+          (log.vibe && log.vibe.toLowerCase().includes(searchVal));
+
+        return matchesSearch;
+      });
+
+      renderSheet(filtered);
+    };
+
+    // Render Database Ledger Spreadsheet (Like an Excel Sheet)
+    function renderSheet(logsToRender) {
+      const tbody = document.getElementById('sheet-table-body');
+      const emptyState = document.getElementById('sheet-empty-state');
+      
+      tbody.innerHTML = '';
+
+      // Set counters
+      document.getElementById('total-rows-count').innerText = currentLogs.length;
+      document.getElementById('displayed-rows-count').innerText = logsToRender.length;
+
+      if (logsToRender.length === 0) {
+        emptyState.classList.remove('hidden');
+        return;
+      }
+      emptyState.classList.add('hidden');
+
+      // Sort logs by date descending, then member name
+      const sorted = [...logsToRender].sort((a, b) => {
+        if (b.date !== a.date) return b.date.localeCompare(a.date);
+        return a.memberName.localeCompare(b.memberName);
+      });
+
+      let rowIndex = 1;
+
+      sorted.forEach(log => {
+        const memberInfo = TEAM_MEMBERS[log.memberId] || { avatar: "👤", name: log.memberName || "Unknown", role: "" };
+        
+        let statusBadge = '';
+        if (log.attendanceStatus === 'Present') {
+          statusBadge = '<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200"><span class="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>Present</span>';
+        } else if (log.attendanceStatus === 'Late') {
+          statusBadge = '<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200"><span class="h-1.5 w-1.5 rounded-full bg-amber-500"></span>Late</span>';
+        } else if (log.attendanceStatus === 'Absent') {
+          statusBadge = '<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-50 text-rose-700 border border-rose-200"><span class="h-1.5 w-1.5 rounded-full bg-rose-500"></span>Absent</span>';
+        } else {
+          statusBadge = '<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-sky-50 text-sky-700 border border-sky-200"><span class="h-1.5 w-1.5 rounded-full bg-sky-500"></span>Excused</span>';
+        }
+
+        const dateStrCell = log.date;
+        const nameStrCell = memberInfo.name;
+        const workStrCell = log.workDone || '';
+        const problemStrCell = log.problems || '';
+        const vibeStrCell = log.vibe || '☕ Normal';
+        const timestamp = log.submissionTime || 'N/A';
+
+        // Prepare cell coordinate pointers for selected box (e.g., A[RowIndex], B[RowIndex])
+        const coordA = `A${rowIndex}`;
+        const coordB = `B${rowIndex}`;
+        const coordC = `C${rowIndex}`;
+        const coordD = `D${rowIndex}`;
+        const coordE = `E${rowIndex}`;
+        const coordF = `F${rowIndex}`;
+        const coordG = `G${rowIndex}`;
+
+        tbody.innerHTML += `
+          <tr class="hover:bg-slate-50 transition-all font-mono text-xs border-b border-slate-100" 
+              ondblclick="openLogModal('${log.memberId}', '${log.date}')">
+            
+            <!-- Excel row index label column -->
+            <td class="bg-slate-50 text-slate-400 text-center border-r border-slate-200 py-2.5 font-mono select-none">${rowIndex}</td>
+            
+            <!-- Column A: Date -->
+            <td class="excel-cell py-2.5 px-3 text-slate-600 font-semibold cursor-pointer" 
+                onclick="selectExcelCell(this, '${coordA}', '${dateStrCell}')">${dateStrCell}</td>
+            
+            <!-- Column B: Name -->
+            <td class="excel-cell py-2.5 px-3 text-slate-900 font-bold cursor-pointer" 
+                onclick="selectExcelCell(this, '${coordB}', '${nameStrCell} - ${memberInfo.role}')">
+              <div class="flex items-center gap-1.5">
+                <span>${memberInfo.avatar}</span>
+                <span class="truncate">${nameStrCell}</span>
+              </div>
+            </td>
+            
+            <!-- Column C: Attendance -->
+            <td class="excel-cell py-2.5 px-3 cursor-pointer" 
+                onclick="selectExcelCell(this, '${coordC}', 'Status: ${log.attendanceStatus}')">${statusBadge}</td>
+            
+            <!-- Column D: Work Done -->
+            <td class="excel-cell py-2.5 px-3 text-slate-600 truncate max-w-[240px] cursor-pointer" 
+                onclick="selectExcelCell(this, '${coordD}', '${workStrCell.replace(/'/g, "\\'")}')">${workStrCell || '<span class="text-slate-400 italic">Empty</span>'}</td>
+            
+            <!-- Column E: Blockers -->
+            <td class="excel-cell py-2.5 px-3 text-rose-800 truncate max-w-[180px] cursor-pointer font-medium" 
+                onclick="selectExcelCell(this, '${coordE}', '${problemStrCell.replace(/'/g, "\\'")}')">
+              ${problemStrCell ? `<span class="bg-rose-50 px-1.5 py-0.5 rounded border border-rose-100"><i class="fa-solid fa-triangle-exclamation text-[9px] mr-1"></i>${problemStrCell}</span>` : '<span class="text-slate-400 italic">None</span>'}
+            </td>
+            
+            <!-- Column F: Vibe -->
+            <td class="excel-cell py-2.5 px-3 text-slate-600 font-semibold cursor-pointer" 
+                onclick="selectExcelCell(this, '${coordF}', '${vibeStrCell}')">
+              <span class="bg-slate-100 border border-slate-200 px-2 py-0.5 rounded">${vibeStrCell}</span>
+            </td>
+            
+            <!-- Column G: Last Updated -->
+            <td class="excel-cell py-2.5 px-3 text-slate-500 text-right cursor-pointer" 
+                onclick="selectExcelCell(this, '${coordG}', 'Auto-captured at ${timestamp}')">${timestamp}</td>
+          </tr>
+        `;
+        rowIndex++;
+      });
+
+      calculateFormulaSummations(logsToRender);
+    }
+
+    // Formulate summaries in Excel style
+    function calculateFormulaSummations(logs) {
+      const todayLogs = logs.filter(l => l.date === todayStr);
+      
+      // SUM Present / Late
+      const presentCount = todayLogs.filter(l => l.attendanceStatus === 'Present' || l.attendanceStatus === 'Late').length;
+      document.getElementById('formula-sum-present').innerText = `${presentCount} Present / 5`;
+
+      // Rate
+      const rateVal = Math.round((presentCount / 5) * 100);
+      document.getElementById('formula-sum-rate').innerText = `${rateVal}% Rate`;
+
+      // Blockers
+      const blockersCount = todayLogs.filter(l => l.problems && l.problems.trim() !== '').length;
+      document.getElementById('formula-sum-blockers').innerText = `${blockersCount} Active today`;
+
+      // Top Vibe
+      if (todayLogs.length > 0) {
+        const vibesCount = {};
+        todayLogs.forEach(l => {
+          if (l.vibe) vibesCount[l.vibe] = (vibesCount[l.vibe] || 0) + 1;
+        });
+        let topVibe = '☕ Normal';
+        let maxCount = 0;
+        Object.keys(vibesCount).forEach(v => {
+          if (vibesCount[v] > maxCount) {
+            maxCount = vibesCount[v];
+            topVibe = v;
+          }
+        });
+        document.getElementById('formula-sum-vibe').innerText = topVibe;
+      } else {
+        document.getElementById('formula-sum-vibe').innerText = '☕ Steady';
+      }
+    }
+
+    // Refresh dynamic summary count tiles
+    function renderStatsCounters() {
+      // 1. Attendance fraction today
+      const todayLogs = currentLogs.filter(l => l.date === todayStr);
+      const presentCount = todayLogs.filter(l => l.attendanceStatus === 'Present' || l.attendanceStatus === 'Late').length;
+      document.getElementById('stat-attendance-rate').innerText = `${Math.round((presentCount / 5) * 100)}%`;
+      document.getElementById('stat-attendance-fraction').innerText = `${presentCount} of 5`;
+
+      // 2. Tasks logged count
+      const taskCount = todayLogs.filter(l => l.workDone && l.workDone.trim() !== '').length;
+      document.getElementById('stat-tasks-completed').innerText = taskCount;
+
+      // 3. Blockers active count
+      const blockerCount = todayLogs.filter(l => l.problems && l.problems.trim() !== '').length;
+      document.getElementById('stat-active-blockers').innerText = blockerCount;
+    }
+
+    // Export current filtered table view to CSV
+    window.exportToCSV = function() {
+      if (currentLogs.length === 0) {
+        showCustomAlert("Export Aborted", "There is no ledger data in memory to compile.", false);
+        return;
+      }
+
+      let csvContent = "data:text/csv;charset=utf-8,";
+      csvContent += "Date,Member Name,Attendance Status,Tasks Accomplished,Problems/Blockers,Vibe,Submission Time\n";
+
+      currentLogs.forEach(log => {
+        const cleanWork = (log.workDone || '').replace(/"/g, '""');
+        const cleanProblems = (log.problems || '').replace(/"/g, '""');
+        csvContent += `"${log.date}","${log.memberName}","${log.attendanceStatus}","${cleanWork}","${cleanProblems}","${log.vibe || 'Normal'}","${log.submissionTime || ''}"\n`;
+      });
+
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement("a");
+      link.setAttribute("href", encodedUri);
+      link.setAttribute("download", `Zenzy_Spreadsheet_Ledger_${todayStr}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    };
+
+
+    // ==========================================
+    // INITIALIZATION & REAL-TIME EVENT HOOKS
+    // ==========================================
+    
+    async function initSystem() {
+      // Authenticate prior to Firestore requests
+      try {
+        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+          try {
+            await signInWithCustomToken(auth, __initial_auth_token);
+          } catch (tokenError) {
+            console.warn("Project token mismatch detected. Falling back to secure anonymous session.", tokenError.message);
+            await signInAnonymously(auth);
+          }
+        } else {
+          await signInAnonymously(auth);
+        }
+      } catch (authError) {
+        console.error("Critical authentication workflow issue:", authError);
+        showCustomAlert("Auth Blocked", "Your connection to the Firebase Instance was blocked. Reconnect your network.", false);
+      }
+
+      onAuthStateChanged(auth, (user) => {
+        currentUser = user;
+        if (user) {
+          // Listen to updates inside custom isolated storage path
+          const ledgerCollection = collection(db, 'artifacts', appId, 'public', 'data', 'daily_logs');
+          onSnapshot(ledgerCollection, (snapshot) => {
+            const loadedLogs = [];
+            snapshot.forEach(doc => {
+              loadedLogs.push(doc.data());
+            });
+
+            currentLogs = loadedLogs;
+            
+            // Redraw everything with latest cloud values
+            renderTeamGrid();
+            applyFilters();
+            renderStatsCounters();
+          }, (err) => {
+            console.error("Database permission / query error:", err);
+            showCustomAlert("Real-time Connection Failure", "Please check firestore access controls or configuration parameters.", false);
+          });
+        }
+      });
+
+      // Initial layouts
+      triggerTimeRefresh();
+    }
+
+    // Launch application
+    window.onload = () => {
+      initSystem();
+    };
+
+  </script>
+
+</body>
+</html>
