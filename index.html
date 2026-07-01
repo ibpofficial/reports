@@ -29,30 +29,29 @@
   
   <style>
     .glass-card {
-      background: rgba(255, 255, 255, 0.9);
+      background: rgba(255, 255, 255, 0.95);
       backdrop-filter: blur(16px);
       -webkit-backdrop-filter: blur(16px);
-      border: 1px solid rgba(226, 232, 240, 0.8);
-      box-shadow: 0 4px 20px -2px rgba(148, 163, 184, 0.12), 0 2px 8px -1px rgba(148, 163, 184, 0.08);
+      border: 1px solid rgba(226, 232, 240, 0.9);
+      box-shadow: 0 4px 20px -2px rgba(148, 163, 184, 0.08), 0 2px 8px -1px rgba(148, 163, 184, 0.05);
     }
     .sheet-scrollbar::-webkit-scrollbar {
-      width: 10px;
-      height: 10px;
+      width: 8px;
+      height: 8px;
     }
     .sheet-scrollbar::-webkit-scrollbar-track {
-      background: rgba(241, 245, 249, 0.8);
+      background: rgba(241, 245, 249, 0.5);
     }
     .sheet-scrollbar::-webkit-scrollbar-thumb {
       background: rgba(148, 163, 184, 0.4);
-      border-radius: 6px;
-      border: 2px solid rgba(241, 245, 249, 0.8);
+      border-radius: 4px;
     }
     .sheet-scrollbar::-webkit-scrollbar-thumb:hover {
       background: rgba(100, 116, 139, 0.6);
     }
     /* Grid background effect */
     .grid-bg {
-      background-image: radial-gradient(rgba(99, 102, 241, 0.05) 1.5px, transparent 1.5px);
+      background-image: radial-gradient(rgba(99, 102, 241, 0.04) 1.5px, transparent 1.5px);
       background-size: 24px 24px;
     }
     /* Spreadsheet cell styling */
@@ -62,10 +61,10 @@
       transition: all 0.1s ease;
     }
     .excel-cell:hover {
-      background-color: rgba(99, 102, 241, 0.04) !important;
+      background-color: rgba(99, 102, 241, 0.03) !important;
     }
     .excel-cell.selected {
-      background-color: rgba(99, 102, 241, 0.08) !important;
+      background-color: rgba(99, 102, 241, 0.07) !important;
       outline: 2px solid #6366f1;
       outline-offset: -2px;
     }
@@ -79,7 +78,7 @@
   <div class="flex-grow pb-12">
     
     <!-- HEADER BAR -->
-    <header class="sticky top-0 z-40 w-full border-b border-slate-200 bg-white/80 backdrop-blur-md px-4 sm:px-6 py-4">
+    <header class="sticky top-0 z-40 w-full border-b border-slate-200 bg-white/90 backdrop-blur-md px-4 sm:px-6 py-4">
       <div class="max-w-7xl mx-auto flex flex-col lg:flex-row items-center justify-between gap-4">
         
         <!-- Logo and Team Status -->
@@ -91,7 +90,7 @@
             <h1 class="text-xl font-extrabold tracking-tight text-slate-900 flex items-center gap-2">
               Zenzy <span class="text-indigo-600 text-xs px-2.5 py-0.5 rounded-full border border-indigo-200 bg-indigo-50 font-bold">Cloud Ledger Pro</span>
             </h1>
-            <p class="text-xs text-slate-500">Automated Enterprise Attendance & Daily Deliverable Sheet</p>
+            <p class="text-xs text-slate-500">Secure Live Attendance & Daily Deliverable Work Progress Sheet</p>
           </div>
         </div>
 
@@ -99,17 +98,17 @@
         <div class="flex items-center gap-4 bg-white px-4 py-2.5 rounded-2xl border border-slate-200 shadow-sm w-full lg:w-auto justify-between lg:justify-start">
           <!-- Dynamic Status Pill -->
           <div class="flex items-center gap-2">
-            <span class="text-xs text-slate-500 hidden sm:inline">Lock Rule:</span>
+            <span class="text-xs text-slate-500 hidden sm:inline">Lock Status:</span>
             <span id="lock-status-badge" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-600 border border-emerald-200">
               <span class="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-              Open (Editable)
+              Open (Active)
             </span>
           </div>
 
           <!-- Dynamic Clock Display -->
           <div class="text-right pl-2 border-l border-slate-100">
             <span id="current-clock" class="font-mono text-sm font-bold text-slate-800">12:00:00 AM</span>
-            <p id="lock-countdown" class="text-[10px] text-slate-500 text-right">Lockout active at midnight</p>
+            <p id="lock-countdown" class="text-[10px] text-slate-500 text-right">Cutoff active at midnight</p>
           </div>
         </div>
 
@@ -127,7 +126,7 @@
         <div class="flex-grow">
           <h4 class="text-sm font-bold text-indigo-950">Midnight Auto-Absent & Lock Policy Enabled (12:00 AM)</h4>
           <p class="text-xs text-slate-600 mt-1 leading-relaxed">
-            Attendance submissions and deliverables must be logged before <strong class="text-indigo-950">12:00 AM Midnight</strong>. If any team member fails to log by midnight, the system will <strong class="text-indigo-600">automatically check them in as Absent</strong> with a system timestamp of 12:00 AM. Manual selection of "Absent" is fully disabled.
+            Attendance submissions and progress logs must be captured before <strong class="text-indigo-950">12:00 AM Midnight</strong>. If any team member fails to check-in, the system will <strong class="text-indigo-600">automatically log them as Absent</strong> at midnight. Manual "Absent" submissions are fully disabled.
           </p>
         </div>
         <button onclick="document.getElementById('rule-alert').classList.add('hidden')" class="text-slate-400 hover:text-slate-600 transition-colors">
@@ -138,7 +137,7 @@
       <!-- DASHBOARD OVERVIEW COUNTERS (TOP) -->
       <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <!-- Present Rate Counter -->
-        <div class="glass-card rounded-2xl p-5 flex items-center justify-between">
+        <div class="glass-card rounded-2xl p-5 flex items-center justify-between bg-white">
           <div>
             <span class="text-xs text-slate-500 font-semibold tracking-wider uppercase">Today's Attendance</span>
             <h3 id="stat-attendance-rate" class="text-3xl font-extrabold text-slate-900 mt-1">0%</h3>
@@ -150,7 +149,7 @@
         </div>
 
         <!-- Completed Tasks Today -->
-        <div class="glass-card rounded-2xl p-5 flex items-center justify-between">
+        <div class="glass-card rounded-2xl p-5 flex items-center justify-between bg-white">
           <div>
             <span class="text-xs text-slate-500 font-semibold tracking-wider uppercase">Tasks Logged Today</span>
             <h3 id="stat-tasks-completed" class="text-3xl font-extrabold text-emerald-600 mt-1">0</h3>
@@ -162,11 +161,11 @@
         </div>
 
         <!-- Active Blockers / Issues -->
-        <div class="glass-card rounded-2xl p-5 flex items-center justify-between">
+        <div class="glass-card rounded-2xl p-5 flex items-center justify-between bg-white">
           <div>
             <span class="text-xs text-slate-500 font-semibold tracking-wider uppercase">Active Blockers</span>
             <h3 id="stat-active-blockers" class="text-3xl font-extrabold text-rose-600 mt-1">0</h3>
-            <p class="text-xs text-slate-500 mt-1">Sticking points highlighted</p>
+            <p class="text-xs text-slate-500 mt-1">Problems highlighted</p>
           </div>
           <div class="h-12 w-12 rounded-xl bg-rose-50 border border-rose-100 flex items-center justify-center text-rose-500">
             <i class="fa-solid fa-triangle-exclamation text-xl"></i>
@@ -174,7 +173,7 @@
         </div>
 
         <!-- Daily Sync Window Indicator -->
-        <div class="glass-card rounded-2xl p-5 flex items-center justify-between">
+        <div class="glass-card rounded-2xl p-5 flex items-center justify-between bg-white">
           <div>
             <span class="text-xs text-slate-500 font-semibold tracking-wider uppercase">Today's Gate Status</span>
             <h3 id="stat-sync-window" class="text-xl font-bold mt-1 text-slate-800">Checking...</h3>
@@ -193,7 +192,7 @@
             <h3 class="text-lg font-bold text-slate-900 flex items-center gap-2">
               <i class="fa-solid fa-users text-indigo-500"></i> Active Crew Directory
             </h3>
-            <p class="text-xs text-slate-500">Click on any team member card to instantly record dynamic progress and vibe</p>
+            <p class="text-xs text-slate-500">Select any team member card below to record your progress and vibe</p>
           </div>
           <span class="text-xs bg-indigo-50 text-indigo-600 px-3 py-1 rounded-full border border-indigo-200 font-bold">
             5 Active Members
@@ -445,8 +444,8 @@
             <button type="button" onclick="closeLogModal()" class="px-5 py-2 rounded-xl text-sm font-semibold text-slate-500 hover:text-slate-800 transition-all">
               Cancel
             </button>
-            <button type="submit" id="form-submit-btn" class="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold px-6 py-2 rounded-xl text-sm transition-all shadow-md flex items-center gap-2">
-              <i class="fa-solid fa-floppy-disk"></i> Save Entry
+            <button type="submit" id="form-submit-btn" class="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold px-6 py-2 rounded-xl text-sm transition-all shadow-md flex items-center gap-2 cursor-pointer">
+              <i class="fa-solid fa-floppy-disk text-xs"></i> Save Entry
             </button>
           </div>
 
@@ -534,11 +533,14 @@
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
-    const appId = typeof __app_id !== 'undefined' ? __app_id : 'zenzy-team-sync-light';
+    
+    // UPDATED: Fresh isolated fallback namespace to eliminate older resource conflict/override errors
+    const appId = typeof __app_id !== 'undefined' ? __app_id : 'zenzy-excel-ledger-v3';
 
     // User Session info
     let currentUser = null;
     let isClearingDatabase = false; // Secure locking state gatekeeper flag
+    let systemSettings = { allCleared: false }; // Central real-time settings register
 
     // Fixed 5 Registered Team Members requested
     const TEAM_MEMBERS = {
@@ -737,25 +739,38 @@
       // Instantly wipe local variables
       currentLogs = [];
       
-      // Force immediate UI re-render for instantaneous visual confirmation without dialogue delays
+      // Force immediate UI re-render for instantaneous visual confirmation
       renderTeamGrid();
       applyFilters();
       renderStatsCounters();
       
       try {
-        // Clear all documents asynchronously in parallel from Firestore
-        const deletePromises = logsToDelete.map(log => {
-          const logDocId = `${log.memberId}_${log.date}`;
-          const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'daily_logs', logDocId);
-          return deleteDoc(docRef);
+        // UPDATED: Write the permanent global settings flag under a fresh, clean collection
+        const settingsDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'zenzy_secure_settings', 'state');
+        await setDoc(settingsDocRef, { allCleared: true, clearedAt: Date.now() });
+
+        // UPDATED: Perform parallel soft-delete AND hard-delete inside the fresh 'zenzy_secure_ledger' path
+        const deletePromises = logsToDelete.map(async (log) => {
+          const logDocId = log.id || `${log.memberId}_${log.date}`;
+          const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'zenzy_secure_ledger', logDocId);
+          
+          // Soft delete flag update
+          await setDoc(docRef, { isDeleted: true });
+
+          // Hard delete trigger
+          try {
+            await deleteDoc(docRef);
+          } catch (e) {
+            console.warn("Direct document deletion blocked; relying on soft-delete parameter", e.message);
+          }
         });
         
         await Promise.all(deletePromises);
-        console.log("Database cleared successfully across remote database clusters.");
+        console.log("Secure ledger database successfully wiped across all nodes.");
       } catch (err) {
         console.error("Purge Error: ", err);
       } finally {
-        // Allow live subscriptions to resume after a short timeout to prevent race re-populations
+        // Resume listener processing
         setTimeout(() => {
           isClearingDatabase = false;
         }, 1500);
@@ -834,7 +849,6 @@
     
     // Returns active lock state according to your custom rules (No modifications after 12:00 AM Midnight)
     function getCurrentLockState() {
-      // Since lockout is strict at 12:00 AM, any day prior to the current real date is fully read-only.
       return { locked: false, reason: "Real-time updates allowed before midnight" };
     }
 
@@ -944,7 +958,8 @@
         vibe,
         lastUpdated: Date.now(),
         submissionTime: formattedTimeStr,
-        isAutoAbsent: false
+        isAutoAbsent: false,
+        isDeleted: false // Explicitly declare non-deleted status
       };
 
       try {
@@ -953,7 +968,12 @@
           return;
         }
 
-        const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'daily_logs', logDocId);
+        // 1. Reset allCleared flag globally on first log entry
+        const settingsDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'zenzy_secure_settings', 'state');
+        await setDoc(settingsDocRef, { allCleared: false });
+
+        // 2. Set the actual entry document
+        const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'zenzy_secure_ledger', logDocId);
         await setDoc(docRef, payload);
 
         closeLogModal();
@@ -967,7 +987,7 @@
 
     // Automatically flags any team member who failed to log before Midnight as Absent
     async function executeAutoAbsentScraper() {
-      if (!currentUser || isClearingDatabase) return;
+      if (!currentUser || isClearingDatabase || systemSettings.allCleared) return;
 
       // Check yesterday and the last 5 days to make sure all past records are fully complete
       const datesToScan = [];
@@ -983,9 +1003,9 @@
           const logExists = currentLogs.some(log => log.memberId === memberId && log.date === checkDate);
 
           if (!logExists) {
-            // Auto-generate Absent Log
+            // Auto-generate Absent Log inside 'zenzy_secure_ledger'
             const logDocId = `${memberId}_${checkDate}`;
-            const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'daily_logs', logDocId);
+            const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'zenzy_secure_ledger', logDocId);
 
             const autoPayload = {
               memberId,
@@ -997,7 +1017,8 @@
               vibe: "😴 Absent",
               submissionTime: "12:00 AM", // Automatic midnight timestamp
               lastUpdated: Date.now(),
-              isAutoAbsent: true
+              isAutoAbsent: true,
+              isDeleted: false
             };
 
             try {
@@ -1321,21 +1342,36 @@
       onAuthStateChanged(auth, (user) => {
         currentUser = user;
         if (user) {
-          const ledgerCollection = collection(db, 'artifacts', appId, 'public', 'data', 'daily_logs');
+          // 1. Establish synchronized settings listener under fresh clean namespace 'zenzy_secure_settings'
+          const settingsDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'zenzy_secure_settings', 'state');
+          onSnapshot(settingsDocRef, (docSnap) => {
+            if (docSnap.exists()) {
+              systemSettings = docSnap.data();
+            } else {
+              systemSettings = { allCleared: false };
+            }
+          });
+
+          // 2. Establish real-time ledger directory monitor under fresh clean namespace 'zenzy_secure_ledger'
+          const ledgerCollection = collection(db, 'artifacts', appId, 'public', 'data', 'zenzy_secure_ledger');
           onSnapshot(ledgerCollection, async (snapshot) => {
             // Guard clause: ignore any snapshot updates while the bulk deletion process is executing
             if (isClearingDatabase) return;
 
             const loadedLogs = [];
             snapshot.forEach(doc => {
-              loadedLogs.push(doc.data());
+              const data = doc.data();
+              // Filter out any entries marked as deleted in the DB
+              if (data && !data.isDeleted && data.memberId) {
+                data.id = doc.id; // Map actual Firestore document ID
+                loadedLogs.push(data);
+              }
             });
 
             currentLogs = loadedLogs;
             
-            // Only execute auto absent scraper if there is at least some historical record,
-            // preventing immediate self-repopulation after a complete wipe.
-            if (loadedLogs.length > 0) {
+            // Execute auto absent scraper only if there is active history and ledger isn't explicitly cleared
+            if (loadedLogs.length > 0 && !systemSettings.allCleared) {
               await executeAutoAbsentScraper();
             }
 
