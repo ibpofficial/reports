@@ -10,7 +10,7 @@
   <!-- Google Fonts (Plus Jakarta Sans) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2 family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Fira+Code:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Fira+Code:wght@400;500;600&display=swap" rel="stylesheet">
   <!-- FontAwesome Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
@@ -28,7 +28,6 @@
   </script>
   
   <style>
-    /* White theme premium cards and shadows */
     .glass-card {
       background: rgba(255, 255, 255, 0.9);
       backdrop-filter: blur(16px);
@@ -80,7 +79,7 @@
   <div class="flex-grow pb-12">
     
     <!-- HEADER BAR -->
-    <header class="sticky top-0 z-40 w-full border-b border-slate-200 bg-white/80 backdrop-blur-md px-6 py-4">
+    <header class="sticky top-0 z-40 w-full border-b border-slate-200 bg-white/80 backdrop-blur-md px-4 sm:px-6 py-4">
       <div class="max-w-7xl mx-auto flex flex-col lg:flex-row items-center justify-between gap-4">
         
         <!-- Logo and Team Status -->
@@ -96,7 +95,7 @@
           </div>
         </div>
 
-        <!-- Lock System Timer & Status Block -->
+        <!-- Lock System Status Block -->
         <div class="flex items-center gap-4 bg-white px-4 py-2.5 rounded-2xl border border-slate-200 shadow-sm w-full lg:w-auto justify-between lg:justify-start">
           <!-- Dynamic Status Pill -->
           <div class="flex items-center gap-2">
@@ -234,7 +233,7 @@
 
             <div class="flex items-center gap-2">
               <!-- Export -->
-              <button onclick="exportToCSV()" class="flex-grow justify-center bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-2 transition-all shadow-sm">
+              <button onclick="exportToCSV()" class="w-full sm:w-auto justify-center bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-2 transition-all shadow-sm">
                 <i class="fa-solid fa-file-export"></i> Export Sheet
               </button>
             </div>
@@ -286,7 +285,7 @@
           </div>
         </div>
 
-        <!-- Excel Formula calculations summary bar (Bottom calculated row) -->
+        <!-- Excel Formula calculations summary bar -->
         <div class="bg-slate-50 border-t border-slate-200 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 divide-y sm:divide-y-0 lg:divide-x divide-slate-200 text-xs font-mono py-3.5 px-4 text-slate-500">
           <div class="flex items-center justify-between px-3 py-1.5">
             <span>Total Attendance Pool:</span>
@@ -539,6 +538,7 @@
 
     // User Session info
     let currentUser = null;
+    let isClearingDatabase = false; // Secure locking state gatekeeper flag
 
     // Fixed 5 Registered Team Members requested
     const TEAM_MEMBERS = {
@@ -605,7 +605,7 @@
         selectVibe('☕ Normal');
       }
 
-      // Configure visual lockout states (Editing is blocked if past 12:00 AM Midnight or past days)
+      // Configure visual lockout states (Editing is blocked if past days)
       const modal = document.getElementById('log-modal');
       const submitBtn = document.getElementById('form-submit-btn');
       const modalLockIndicator = document.getElementById('modal-locked-indicator');
@@ -621,7 +621,7 @@
         if (isAutoAbsentRecord) {
           modalLockIndicator.innerHTML = `<i class="fa-solid fa-lock text-[10px]"></i> Locked (Auto-Absent Recorded)`;
         } else {
-          modalLockIndicator.innerHTML = `<i class="fa-solid fa-lock text-[10px]"></i> Locked (Past Midnight)`;
+          modalLockIndicator.innerHTML = `<i class="fa-solid fa-lock text-[10px]"></i> Locked`;
         }
         submitBtn.disabled = true;
         submitBtn.className = "bg-slate-200 text-slate-400 cursor-not-allowed font-semibold px-6 py-2 rounded-xl text-sm border border-slate-300 flex items-center gap-2";
@@ -715,7 +715,15 @@
     };
 
     window.clearAllLogs = async function() {
-      if (!currentUser) return;
+      // Ensure we have a valid authentication context
+      const user = auth.currentUser;
+      if (!user) {
+        try {
+          await signInAnonymously(auth);
+        } catch (e) {
+          console.error("Critical fallback authorization mismatch", e);
+        }
+      }
       
       // Close confirmation modal instantly
       window.closeClearConfirmModal();
@@ -723,34 +731,34 @@
       // Capture the current logs to delete before clearing state
       const logsToDelete = [...currentLogs];
       
-      // CRITICAL: Instantly wipe the local state array so the sheet goes empty in the UI immediately
+      // CRITICAL: Activate clearing guard so background onSnapshot listeners ignore deletions
+      isClearingDatabase = true;
+      
+      // Instantly wipe local variables
       currentLogs = [];
       
-      // Force immediate UI re-render for instantaneous visual confirmation
+      // Force immediate UI re-render for instantaneous visual confirmation without dialogue delays
       renderTeamGrid();
       applyFilters();
       renderStatsCounters();
       
-      // Show confirmation alert that the process has begun
-      showCustomAlert("Sheet Cleared", "The UI is now empty. Purging cloud records in the background...", true);
-      
       try {
-        let count = 0;
-        for (const log of logsToDelete) {
+        // Clear all documents asynchronously in parallel from Firestore
+        const deletePromises = logsToDelete.map(log => {
           const logDocId = `${log.memberId}_${log.date}`;
           const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'daily_logs', logDocId);
-          await deleteDoc(docRef);
-          count++;
-        }
+          return deleteDoc(docRef);
+        });
         
-        // Auto-close the toast overlay once the background deletions complete
-        setTimeout(() => {
-          window.closeCustomAlert();
-        }, 1200);
-        
+        await Promise.all(deletePromises);
+        console.log("Database cleared successfully across remote database clusters.");
       } catch (err) {
         console.error("Purge Error: ", err);
-        showCustomAlert("Sync Error", "The local sheet was cleared, but some database records failed to delete: " + err.message, false);
+      } finally {
+        // Allow live subscriptions to resume after a short timeout to prevent race re-populations
+        setTimeout(() => {
+          isClearingDatabase = false;
+        }, 1500);
       }
     };
 
@@ -826,7 +834,6 @@
     
     // Returns active lock state according to your custom rules (No modifications after 12:00 AM Midnight)
     function getCurrentLockState() {
-      // In a real clock-driven system without simulator, we verify if the day requested has already ended.
       // Since lockout is strict at 12:00 AM, any day prior to the current real date is fully read-only.
       return { locked: false, reason: "Real-time updates allowed before midnight" };
     }
@@ -960,7 +967,7 @@
 
     // Automatically flags any team member who failed to log before Midnight as Absent
     async function executeAutoAbsentScraper() {
-      if (!currentUser) return;
+      if (!currentUser || isClearingDatabase) return;
 
       // Check yesterday and the last 5 days to make sure all past records are fully complete
       const datesToScan = [];
@@ -1008,82 +1015,6 @@
       }
     }
 
-    // Autofill/Seeding function to make the workbook rich and useful immediately
-    window.seedMockData = async function() {
-      if (!currentUser) return;
-      
-      const seedDays = ['2026-06-28', '2026-06-29', '2026-06-30', '2026-07-01'];
-      const mockActivities = {
-        jatin: [
-          { work: "Designed core system schema and setup Firestore security parameters.", problems: "Tuning the security access policies." },
-          { work: "Optimized index rules and mapped spreadsheet column coordinates.", problems: "" },
-          { work: "Integrated modal structures and refined responsive layouts.", problems: "Safari backdrop blur latency issues." },
-          { work: "Prepared export procedures and added formulas calculated footer metrics.", problems: "" }
-        ],
-        rohit: [
-          { work: "Drafted grid-bg styles and designed elegant light slate shadows.", problems: "" },
-          { work: "Reconfigured premium buttons hover, shadows, and transitions.", problems: "" },
-          { work: "Created status badges and directory cards templates.", problems: "" },
-          { work: "Polished formula inspection row and clean spreadsheet gridlines.", problems: "" }
-        ],
-        govind: [
-          { work: "Completed first round of Zenzy feature mapping and requirements specs.", problems: "Priority adjustments on sprint deadline." },
-          { work: "Coordinated requirements regarding 12:00 AM locked gates testing.", problems: "" },
-          { work: "Reviewed performance logs and compiled feedback.", problems: "" },
-          { work: "Completed stakeholder validation reviews for export formatting.", problems: "" }
-        ],
-        vikas: [
-          { work: "Established Firebase configuration and connection parameters.", problems: "" },
-          { work: "Constructed secure anonymous authorization pipelines.", problems: "Custom token mismatch on isolated workspace configuration." },
-          { work: "Engineered onSnapshot updates and database write wrappers.", problems: "" },
-          { work: "Optimized ledger loads to less than 120ms.", problems: "" }
-        ],
-        ishant: [
-          { work: "Wrote unit tests for simulation clocks and locking states.", problems: "" },
-          { work: "Validated CSV structure output formats match Excel standards.", problems: "" },
-          { work: "Performed system assertion checks on anonymous sessions.", problems: "Failing query conditions on blank databases." },
-          { work: "Verified snapshot updates propagate across concurrent browsers.", problems: "" }
-        ]
-      };
-
-      const vibes = ['🚀 Excellent', '😊 Productive', '☕ Normal', '😴 Tired', '🚨 Blocked'];
-      // Keep "Present" or "Late" for mock seeds - "Absent" is now auto-triggered if missed!
-      const statuses = ['Present', 'Late', 'Present', 'Present', 'Excused'];
-      const mockTimes = ['09:42 AM', '10:15 AM', '09:05 AM', '11:20 AM', '10:02 AM'];
-
-      showCustomAlert("Seeding Cloud Sheet...", "Populating historical entries directly into Firestore...", true);
-
-      try {
-        let count = 0;
-        for (const date of seedDays) {
-          for (const memberId of Object.keys(TEAM_MEMBERS)) {
-            const index = seedDays.indexOf(date);
-            const userActivity = mockActivities[memberId][index % 4];
-            
-            const logDocId = `${memberId}_${date}`;
-            const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'daily_logs', logDocId);
-            
-            await setDoc(docRef, {
-              memberId,
-              memberName: TEAM_MEMBERS[memberId].name,
-              date,
-              attendanceStatus: statuses[(index + count) % statuses.length],
-              workDone: userActivity.work,
-              problems: userActivity.problems,
-              vibe: vibes[(index + count) % vibes.length],
-              submissionTime: mockTimes[(index + count) % mockTimes.length],
-              lastUpdated: Date.now() - (seedDays.length - index) * 86400000,
-              isAutoAbsent: false
-            });
-            count++;
-          }
-        }
-        showCustomAlert("Historical Seeding Finished", "Workbook populated successfully! View the interactive spreadsheet below.", true);
-      } catch (e) {
-        console.error("Seed error:", e);
-        showCustomAlert("Seeding Failed", "Could not populate cloud data: " + e.message, false);
-      }
-    };
 
     // ==========================================
     // RENDER CONTROLLERS
@@ -1219,7 +1150,6 @@
         } else if (log.attendanceStatus === 'Late') {
           statusBadge = '<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-50 text-amber-700 border border-amber-200"><span class="h-1.5 w-1.5 rounded-full bg-amber-500"></span>Late</span>';
         } else if (log.attendanceStatus === 'Absent') {
-          // Absent tag styled with distinct badge indicating auto lockout capture
           statusBadge = '<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-50 text-rose-700 border border-rose-200"><span class="h-1.5 w-1.5 rounded-full bg-rose-500"></span>Absent (Auto)</span>';
         } else {
           statusBadge = '<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-sky-50 text-sky-700 border border-sky-200"><span class="h-1.5 w-1.5 rounded-full bg-sky-500"></span>Excused</span>';
@@ -1393,6 +1323,9 @@
         if (user) {
           const ledgerCollection = collection(db, 'artifacts', appId, 'public', 'data', 'daily_logs');
           onSnapshot(ledgerCollection, async (snapshot) => {
+            // Guard clause: ignore any snapshot updates while the bulk deletion process is executing
+            if (isClearingDatabase) return;
+
             const loadedLogs = [];
             snapshot.forEach(doc => {
               loadedLogs.push(doc.data());
@@ -1400,8 +1333,11 @@
 
             currentLogs = loadedLogs;
             
-            // Execute background auto absent scan dynamically
-            await executeAutoAbsentScraper();
+            // Only execute auto absent scraper if there is at least some historical record,
+            // preventing immediate self-repopulation after a complete wipe.
+            if (loadedLogs.length > 0) {
+              await executeAutoAbsentScraper();
+            }
 
             // Redraw everything with latest cloud values
             renderTeamGrid();
