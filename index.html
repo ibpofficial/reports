@@ -716,20 +716,41 @@
 
     window.clearAllLogs = async function() {
       if (!currentUser) return;
+      
+      // Close confirmation modal instantly
       window.closeClearConfirmModal();
-      showCustomAlert("Wiping Database...", "Disconnecting and purging cloud records...", true);
+      
+      // Capture the current logs to delete before clearing state
+      const logsToDelete = [...currentLogs];
+      
+      // CRITICAL: Instantly wipe the local state array so the sheet goes empty in the UI immediately
+      currentLogs = [];
+      
+      // Force immediate UI re-render for instantaneous visual confirmation
+      renderTeamGrid();
+      applyFilters();
+      renderStatsCounters();
+      
+      // Show confirmation alert that the process has begun
+      showCustomAlert("Sheet Cleared", "The UI is now empty. Purging cloud records in the background...", true);
+      
       try {
         let count = 0;
-        for (const log of currentLogs) {
+        for (const log of logsToDelete) {
           const logDocId = `${log.memberId}_${log.date}`;
           const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'daily_logs', logDocId);
           await deleteDoc(docRef);
           count++;
         }
-        showCustomAlert("Sheet Purged", `Successfully deleted ${count} entries from the secure cloud ledger.`, true);
+        
+        // Auto-close the toast overlay once the background deletions complete
+        setTimeout(() => {
+          window.closeCustomAlert();
+        }, 1200);
+        
       } catch (err) {
         console.error("Purge Error: ", err);
-        showCustomAlert("Action Failed", "Wipe aborted: " + err.message, false);
+        showCustomAlert("Sync Error", "The local sheet was cleared, but some database records failed to delete: " + err.message, false);
       }
     };
 
